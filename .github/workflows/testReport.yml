@@ -1,0 +1,58 @@
+# Define the name of the workflow
+name: Test Report
+
+# Define when the workflow should run (when code is pushed to or a pull request is opened against the 'master' branch)
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+# Define the jobs that make up the workflow
+jobs:
+  # Define a job named 'test'
+  test:
+    # Define the operating system on which the job should run
+    runs-on: windows-latest
+
+    # Define the permissions the job needs to access repository data (checks and pull requests)
+    permissions:
+      checks: write
+      pull-requests: write
+
+    # Define the steps to run within the job
+    steps:
+      # Step 1: Check out the code
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+      # Step 2: Restore NuGet packages
+    - name: Restore NuGet packages
+      run: dotnet restore
+
+      # Step 3: Build the code
+    - name: Build
+      run: dotnet build --configuration Debug
+
+      # Step 4: Run tests and generate test results
+    - name: Run tests
+      run: dotnet test ./bin/Debug/InvoiceCloudAssessment.dll --no-restore --configuration Debug --logger "trx;LogFileName=test-results.trx" || true
+     
+      # Step 5: Publish the test results to the repository 
+    - name: Publish Test Results
+      uses: EnricoMi/publish-unit-test-result-action/composite@v2
+      if: always()
+      with:
+        files: |
+           **/*.trx
+
+     # Step 6: Upload the test results as a build artifact       
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v3.1.2
+      with:
+       name: Artifact Test
+       path: "**/*.trx"
+       
+      
